@@ -10,7 +10,10 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
+
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
 import android.util.Log;
 
 
@@ -54,27 +57,21 @@ public class GpsTracker extends Service implements LocationListener {
 
                 if (isNetworkEnabled) {
                     locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_TIME_BW_UPDATES, MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-                    if (locationManager != null)
-                    {
+                    if (locationManager != null) {
                         location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                        if (location != null)
-                        {
+                        if (location != null) {
                             latitude = location.getLatitude();
                             longitude = location.getLongitude();
                         }
                     }
                 }
 
-                if (isGPSEnabled)
-                {
-                    if (location == null)
-                    {
+                if (isGPSEnabled) {
+                    if (location == null) {
                         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME_BW_UPDATES, MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-                        if (locationManager != null)
-                        {
+                        if (locationManager != null) {
                             location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                            if (location != null)
-                            {
+                            if (location != null) {
                                 latitude = location.getLatitude();
                                 longitude = location.getLongitude();
                             }
@@ -82,51 +79,41 @@ public class GpsTracker extends Service implements LocationListener {
                     }
                 }
             }
-        }
-        catch (Exception e)
-        {
-            Log.d("@@@", ""+e.toString());
+        } catch (Exception e) {
+            Log.d("@@@", "" + e.toString());
         }
         return location;
     }
 
-    public double getLatitude()
-    {
-        if(location != null)
-        {
+    public double getLatitude() {
+        if (location != null) {
             latitude = location.getLatitude();
         }
         return latitude;
     }
 
-    public double getLongitude()
-    {
-        if(location != null)
-        {
+    public double getLongitude() {
+        if (location != null) {
             longitude = location.getLongitude();
         }
         return longitude;
     }
 
     @Override
-    public void onLocationChanged(Location location)
-    {
+    public void onLocationChanged(Location location) {
     }
 
     @Override
-    public void onProviderDisabled(String provider)
-    {
+    public void onProviderDisabled(String provider) {
     }
 
     @Override
-    public void onProviderEnabled(String provider)
-    {
+    public void onProviderEnabled(String provider) {
     }
 
     @Override
-    public void onStatusChanged(String provider, int status, Bundle extras)
-    {
-        // locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 300, this);
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        //locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 300, this);
     }
 
     @Override

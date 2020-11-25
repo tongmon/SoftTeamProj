@@ -12,9 +12,12 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.util.Log;
@@ -22,7 +25,10 @@ import android.location.Geocoder;
 import android.location.Address;
 import android.content.DialogInterface;
 import android.app.AlertDialog;
+import android.content.ServiceConnection;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.io.IOException;
 import java.util.Locale;
@@ -35,8 +41,11 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSIONS_REQUEST_CODE = 100;
     String[] REQUIRED_PERMISSIONS  = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
 
-    private Button button1, button2;
     private TextView textView1;
+    private Switch switch1;
+
+    private MyService mService;
+    private boolean mBound, toggle = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,31 +55,46 @@ public class MainActivity extends AppCompatActivity {
         this.getViewObject();
 
         if (!checkLocationServicesStatus()) {
-
             showDialogForLocationServiceSetting();
-        }else {
-
+        } else {
             checkRunTimePermission();
         }
 
-        View.OnClickListener clickListener = new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (v.getId() == R.id.button1) {
-                    gpsTracker = new GpsTracker(MainActivity.this);
+        gpsTracker = new GpsTracker(MainActivity.this);
 
-                    double latitude = gpsTracker.getLatitude(); // 위도
-                    double longitude = gpsTracker.getLongitude(); // 경도
-                    // gpsTracker.locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, MIN_DISTANCE_UPDATE, this);
-                    textView1.setText("위도" + latitude + "경도" + longitude);
+        (switch1).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked && !toggle) {
+                    if(!toggle) toggle = true;
+                    Intent intent = new Intent(getApplication(), MyService.class);
+                    startService(intent);
+                    Intent intent2 = new Intent(getApplication(), MyService.class);
+                    intent2.setAction("startForeground");
 
-                } else if (v.getId() == R.id.button2) {
-
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent2);
+                    } else {
+                        startService(intent2);
+                    }
+                    // mService.getGPS(textView1);
+                }
+                else if(toggle)
+                {
+                    // 저장 끝
+                    Intent intent = new Intent(getApplication(), MyService.class);
+                    mService.onDestroy();
+                    stopService(intent);
+                    toggle = false;
                 }
             }
-        };
-        button1.setOnClickListener(clickListener);
-        button2.setOnClickListener(clickListener);
+        });
+
+    }
+
+    private void getViewObject()
+    {
+        textView1 = findViewById(R.id.textView1);
+        switch1 = findViewById(R.id.switch1);
     }
 
     @Override
@@ -188,12 +212,5 @@ public class MainActivity extends AppCompatActivity {
 
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-    }
-
-    private void getViewObject()
-    {
-        button1 = findViewById(R.id.button1);
-        button2 = findViewById(R.id.button2);
-        textView1 = findViewById(R.id.textView1);
     }
 }
