@@ -1,11 +1,13 @@
 package com.example.txt_saver;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -14,6 +16,8 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.IBinder;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -27,7 +31,9 @@ import android.content.DialogInterface;
 import android.app.AlertDialog;
 import android.content.ServiceConnection;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.io.IOException;
@@ -35,25 +41,30 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    private GpsTracker gpsTracker;
+    static File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS); // 파일 저장 경로... 다운로드 폴더 보면 나옴
+    static File f = new File(path, "Corona.txt"); // 파일 이름
+
+    static GpsTracker gpsTracker; // 위치 뜯어올 때 사용하는 함수
 
     private static final int GPS_ENABLE_REQUEST_CODE = 2001;
     private static final int PERMISSIONS_REQUEST_CODE = 100;
+    final static int PERMISSION_REQUEST_CODE = 1000;
     String[] REQUIRED_PERMISSIONS  = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
 
-    private TextView textView1;
     private Switch switch1;
 
     private MyService mService;
     private boolean mBound, toggle = false;
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // 권한 부여라 알 필요 없음
+        requestPermission();
         this.getViewObject();
-
         if (!checkLocationServicesStatus()) {
             showDialogForLocationServiceSetting();
         } else {
@@ -62,10 +73,10 @@ public class MainActivity extends AppCompatActivity {
 
         gpsTracker = new GpsTracker(MainActivity.this);
 
+        // 스위치 true, false
         (switch1).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked && !toggle) {
-                    if(!toggle) toggle = true;
+                if (isChecked) {
                     Intent intent = new Intent(getApplication(), MyService.class);
                     startService(intent);
                     Intent intent2 = new Intent(getApplication(), MyService.class);
@@ -76,26 +87,71 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         startService(intent2);
                     }
-                    // mService.getGPS(textView1);
                 }
-                else if(toggle)
+                else
                 {
                     // 저장 끝
                     Intent intent = new Intent(getApplication(), MyService.class);
                     mService.onDestroy();
                     stopService(intent);
-                    toggle = false;
                 }
             }
         });
-
     }
 
-    private void getViewObject()
+    private void getViewObject() // 객체 할당 함수
     {
-        textView1 = findViewById(R.id.textView1);
         switch1 = findViewById(R.id.switch1);
     }
+
+    void requestPermission(){
+        final int REQUEST_EXTERNAL_STORAGE = 1;
+        String[] PERMISSION_STORAGE = {
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+        };
+
+        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        if(permission != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, PERMISSION_STORAGE, REQUEST_EXTERNAL_STORAGE);
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        // 서비스와 연결
+        Intent intent = new Intent(this, MyService.class);
+        bindService(intent, mConnection, BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        // 서비스와 연결 해제
+        if (mBound) {
+            unbindService(mConnection);
+            mBound = false;
+        }
+    }
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // MyBinder와 연결될 것이며 IBinder 타입으로 넘어오는 것을 캐스팅하여 사용
+            MyService.MyBinder binder = (MyService.MyBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            // 예기치 않은 종료
+        }
+    };
 
     @Override
     public void onRequestPermissionsResult(int permsRequestCode,

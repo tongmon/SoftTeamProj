@@ -8,15 +8,20 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
-import android.support.v4.app.INotificationSideChannel;
 import android.util.Log;
-import android.widget.TextView;
 
-import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import static com.example.txt_saver.MainActivity.f;
+import static com.example.txt_saver.MainActivity.gpsTracker;
 
 public class MyService extends Service {
     private static final String TAG = MyService.class.getSimpleName();
@@ -39,19 +44,18 @@ public class MyService extends Service {
                 public void run() {
                     while(true) {
                         try {
-                            Thread.sleep(1000);
+                            Thread.sleep(5000); // 5초마다 동선 획득
                             // 현재 시각 받기
-                            /*
                             long now = System.currentTimeMillis();
                             Date date = new Date(now);
-                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); // 시간 패턴
                             String getTime = sdf.format(date);
                             // 위치 받기
-                            gpsServ.getLocation();
-                            double latitude = gpsServ.getLatitude(); // 위도
-                            double longitude = gpsServ.getLongitude(); // 경도
-                            */
-                            Log.d(TAG, "testtestsetestsesefsfa");
+                            gpsTracker.getLocation();
+                            double latitude = gpsTracker.getLatitude(); // 위도
+                            double longitude = gpsTracker.getLongitude(); // 경도
+                            String Buffer = getTime + " " + String.valueOf(latitude) + " " + String.valueOf(longitude) + "\n"; // 저장 패턴, 이대로 파싱
+                            WriteTextFile(Buffer);
                         } catch (InterruptedException e) {
                             // 스레드에 인터럽트가 걸리면
                             // 오래 걸리는 처리 종료
@@ -63,6 +67,21 @@ public class MyService extends Service {
             mThread.start();
         }
         return START_NOT_STICKY;
+    }
+
+    public void WriteTextFile(String contents) // 텍스트 파일에 저장하는 함수
+    {
+        try{
+            FileOutputStream fos = new FileOutputStream(f, true);
+            BufferedOutputStream bos = new BufferedOutputStream(fos);
+            DataOutputStream dos = new DataOutputStream(bos);
+            dos.write(contents.getBytes());
+            dos.flush();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
