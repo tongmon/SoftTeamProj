@@ -12,68 +12,58 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 
-import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
+import java.util.Vector;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
-class GetPatientInfo {
+class Datast {
+    public String date, time, x, y;
+}
+
+class GetInfoToURL extends AsyncTask<String,String,String> {
     HashMap local = new HashMap<String, Integer>();
     String test = "";
-    String save;
+    public String save;
     TextView textview, t2;
-    Document doc;
-    Elements contents;
-    String iD;
-    String spData[][];
-    String gpsInfo[][]; //x, y
-    String url;
+    public String iD;
+    public String json;
+    String st = "false";
+    public Vector<Datast> Info = new Vector<Datast>();
 
-    GetPatientInfo() {
-        local.put("seoul",100);
-        local.put("anyang",101);
-        local.put("suwon",102);
+    GetInfoToURL() {
+        local.put("seoul", 100);
+        local.put("anyang", 101);
+        local.put("suwon", 102);
     }
 
-    public class GetInfoToURL extends AsyncTask<String,String,String> {
-        @Override
-        protected String doInBackground(String... params) {
-            doc = null;
-            try {
-                Document doc = (Document) Jsoup.connect("http://18.217.217.150:3000/geo").timeout(3000).get();
-                contents = doc.select("pre");
-                save = contents.toString();
+    protected String doInBackground(String... params) {
+        try {
+            String uri = params[0];
+            URL url = new URL(uri);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            StringBuilder sb = new StringBuilder();
 
-                JSONArray jsonOb = new JSONArray(save);
-
-                int num=0;
-                JSONObject userOb;
-                for(int i=0; i<jsonOb.length(); i++){
-                    userOb = jsonOb.getJSONObject(i);
-                    if(userOb.getString("id") == iD) {
-                        gpsInfo[num][0] = userOb.getString("geodate");
-                        gpsInfo[num][1] = userOb.getString("geotime");
-                        gpsInfo[num][2] = userOb.getString("x_cord");
-                        gpsInfo[num++][3] = userOb.getString("y_cord");
-                    }
-                }
-                // gpsInfo [0] [0,1,2,3]->{date, time, x, y}
-                // gpsInfo [1] [0,1,2,3]->{date, time, x, y}
-
-                //지도에 그리는거 넣기
-
-            }catch (IOException | JSONException e) {
-                e.printStackTrace();;
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            String j;
+            while ((j = bufferedReader.readLine()) != null) {
+                sb.append(j).append("\n");
             }
-            return "True";
+            save = sb.toString().trim();
+            return sb.toString().trim();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "false";
         }
-        @Override
-        protected void onPostExecute(String result) {
-            super.onPostExecute(result);
-        }
+    }
+
+    protected void onPostExecute(String result) {
+        json = result;
     }
 }
 
@@ -81,7 +71,8 @@ public class SearchInput extends Activity {
 
     private EditText InputBox1;
     private TextView textView4;
-    static GetPatientInfo InfoPatient = new GetPatientInfo();
+    static GetInfoToURL InfoPatient = new GetInfoToURL();
+    static boolean is_On = false;
 
     private ImageButton confirm, back;
 
@@ -111,7 +102,38 @@ public class SearchInput extends Activity {
                     {
                         // 여기서 넘겨줌
                         // 확인도 필요, Data가 검색할 환자 ID
-                        startActivity(intent);
+                        InfoPatient.iD = Data;
+                        if (!is_On) {
+                            try {
+                                InfoPatient.execute("http://18.217.217.150:3000/geo").get();
+                                is_On = true;
+                            } catch (ExecutionException e) {
+                                e.printStackTrace();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        try {
+                            JSONArray jsonObject = new JSONArray(InfoPatient.save);
+                            for (int i = 0; i < jsonObject.length(); i++) {
+                                JSONObject usersObject = jsonObject.getJSONObject(i);
+                                if (usersObject.getString("id").equals(InfoPatient.iD)) {
+                                    Datast buffer = new Datast();
+                                    buffer.date = usersObject.getString("geodate");
+                                    buffer.time = usersObject.getString("geotime");
+                                    buffer.x = usersObject.getString("x_cord");
+                                    buffer.y = usersObject.getString("y_cord");
+                                    InfoPatient.Info.add(buffer);
+                                }
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        if (!InfoPatient.Info.isEmpty())
+                            startActivity(intent);
+                        else {
+                            textView4.setText("매칭되는 ID가 없습니다.");
+                        }
                     } else // 잘못된 입력일 시
                     {
                         textView4.setText("잘못된 입력입니다.\n00000#00000 형식을 맞춰주세요.");
