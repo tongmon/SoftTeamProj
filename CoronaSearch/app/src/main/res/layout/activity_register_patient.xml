@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".RegisterPatient">
+    tools:context=".RegisterPatient"
+    android:background="@drawable/default_bg">
 
     <Spinner
         android:id="@+id/spinner"
@@ -24,6 +25,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:fontFamily="@font/nanum_barunpen"
+        android:textColorHint="#FFFFFF"
+        android:backgroundTint="#FFFFFF"
         android:ems="10"
         android:gravity="center"
         android:hint="인증 코드"
@@ -55,6 +59,8 @@
         android:gravity="center"
         android:text="환자 인증 코드를 입력하고\n지역을 선택해주세요."
         android:textSize="18sp"
+        android:fontFamily="@font/nanum_barunpen"
+        android:textColor="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

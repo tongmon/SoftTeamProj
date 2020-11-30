@@ -13,7 +13,7 @@
         android:layout_marginStart="30dp"
         android:layout_marginTop="70dp"
         android:text="환자 등록"
-        android:textSize="50dp"
+        android:textSize="40dp"
         android:fontFamily="@font/nanum_barunpen"
         android:textColor="#FFFFFF"
         app:layout_constraintStart_toStartOf="parent"

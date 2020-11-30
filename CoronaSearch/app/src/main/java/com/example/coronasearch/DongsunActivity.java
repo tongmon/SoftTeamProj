@@ -2,6 +2,7 @@ package com.example.coronasearch;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.widget.SeekBar;
 
 import androidx.fragment.app.FragmentActivity;
 
@@ -21,15 +22,47 @@ public class DongsunActivity extends FragmentActivity implements OnMapReadyCallb
     private LatLng startLatLng = new LatLng(0, 0);
     private LatLng endLatLng = new LatLng(0, 0);
     private Polyline line;
+    private SeekBar seekBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dongsun);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+
+        seekBar  = (SeekBar) findViewById(R.id.seekBar);
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        seekBar.setProgress(25);
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                line.remove();
+                int K = seekBar.getProgress();
+                endLatLng = new LatLng(Double.parseDouble(InfoPatient.Info.get(0).x), Double.parseDouble(InfoPatient.Info.get(0).y));
+                for (int i = 1; i < InfoPatient.Info.size() * K / 50; i++) {
+                    startLatLng = new LatLng(endLatLng.latitude, endLatLng.longitude);
+                    endLatLng = new LatLng(Double.parseDouble(InfoPatient.Info.get(i).x), Double.parseDouble(InfoPatient.Info.get(i).y));
+                    drawPath();
+                }
+            }
+
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                //tv.setText("onStart TrackingTouch");
+            }
+
+            public void onProgressChanged(SeekBar seekBar, int progress,
+                                          boolean fromUser) {
+                line.remove();
+                int K = seekBar.getProgress();
+                endLatLng = new LatLng(Double.parseDouble(InfoPatient.Info.get(0).x), Double.parseDouble(InfoPatient.Info.get(0).y));
+                for (int i = 1; i < InfoPatient.Info.size() * K / 50; i++) {
+                    startLatLng = new LatLng(endLatLng.latitude, endLatLng.longitude);
+                    endLatLng = new LatLng(Double.parseDouble(InfoPatient.Info.get(i).x), Double.parseDouble(InfoPatient.Info.get(i).y));
+                    drawPath();
+                }
+            }
+        });
     }
 
     @Override
@@ -46,24 +79,17 @@ public class DongsunActivity extends FragmentActivity implements OnMapReadyCallb
 
         endLatLng = new LatLng(Double.parseDouble(InfoPatient.Info.get(0).x), Double.parseDouble(InfoPatient.Info.get(0).y));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(endLatLng));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(endLatLng,16));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(endLatLng,13));
         for (int i = 1; i < InfoPatient.Info.size(); i++){
             startLatLng = new LatLng(endLatLng.latitude, endLatLng.longitude);
             endLatLng = new LatLng(Double.parseDouble(InfoPatient.Info.get(i).x), Double.parseDouble(InfoPatient.Info.get(i).y));
             drawPath();
         }
-
-        /*
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,16));
-        */
     }
 
     private void drawPath()
     {
-        PolylineOptions options = new PolylineOptions().add(startLatLng).add(endLatLng).width(15).color(Color.BLACK).geodesic(true);
+        PolylineOptions options = new PolylineOptions().add(startLatLng).add(endLatLng).width(15).color(Color.RED).geodesic(true);
         line = mMap.addPolyline(options);
     }
 }
