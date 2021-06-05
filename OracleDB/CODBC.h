@@ -17,7 +17,7 @@ struct DB_Table {
     vector<vector<wstring>> Tuples; // ·¹ÄÚµå
 
     void PrintTable(vector<wstring> &ptitle) {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 5 && index + i < Tuples.size(); i++) {
             PrintRecord(ptitle, index + i);
             wcout << L"\n";
         }
