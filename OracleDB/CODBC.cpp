@@ -159,12 +159,13 @@ int CODBC::PrintTable(int Degree, wstring title)
     return 1;
 }
 
+/*
 int CODBC::GetTableData(int Degree, vector<vector<wstring>>& tableData)
 {
     tableData.clear();
     vector<wstring> Zero;
     vector<string> Attribute(Degree);
-    SQLLEN Len;
+    SQLLEN Len = 0;
 
     for (int i = 0; i < Degree; i++) {
         SQLBindCol(hstmt, i + 1, SQL_C_CHAR, &Attribute[i][0], mMaxBufferSize, &Len);
@@ -182,6 +183,58 @@ int CODBC::GetTableData(int Degree, vector<vector<wstring>>& tableData)
         }
     }
     if (tableData.empty()) {
+        SQLFreeStmt(hstmt, SQL_UNBIND);
+        return -1;
+    }
+    SQLFreeStmt(hstmt, SQL_UNBIND);
+    return 1;
+}
+*/
+
+int CODBC::GetTableData(DB_Table& tableData)
+{
+    vector<wstring> Zero;
+    SQLWCHAR colName[256];
+    SQLLEN Len = 0, displaySize = 0;
+    SQLULEN colLen = 0;
+    SQLSMALLINT Degree = 0, colnameLen = 0, colType = 0, decimalDigits = 0, nullAble = 0;
+    retcode = SQLNumResultCols(hstmt, &Degree);
+
+    tableData.Attribute.clear();
+    tableData.Tuples.clear();
+    SQLCHAR Data[128][512];
+    tableData.Attribute.clear();
+    tableData.Attribute.resize(Degree);
+
+    for (int i = 0; i < Degree; i++) {
+        SQLDescribeCol(hstmt, i + 1, colName, sizeof(colName), &colnameLen, &colType, &colLen, &decimalDigits, &nullAble);
+        SQLColAttribute(hstmt, i + 1, SQL_COLUMN_DISPLAY_SIZE, NULL, 0, NULL, &displaySize);
+        colLen = colLen > displaySize ? displaySize + 1 : colLen + 1;
+        
+        tableData.Attribute[i].resize(colLen);
+        for (int j = 0; j < colLen; j++) {
+            tableData.Attribute[i][j] = colName[j];
+        }
+
+        SQLBindCol(hstmt, i + 1, SQL_C_CHAR, Data[i], mMaxBufferSize, &Len);
+    }
+
+    while (true) {
+        retcode = SQLFetch(hstmt);
+        if (retcode == SQL_NO_DATA)
+            break;
+        tableData.Tuples.push_back(Zero);
+        for (int i = 0; i < Degree; i++) {
+            string buf;
+            int k = 0;
+            while (Data[i][k] != '\0') {
+                buf += Data[i][k];
+                k++;
+            }
+            tableData.Tuples.back().push_back(wstrconv(buf));
+        }
+    }
+    if (tableData.Tuples.empty()) {
         SQLFreeStmt(hstmt, SQL_UNBIND);
         return -1;
     }

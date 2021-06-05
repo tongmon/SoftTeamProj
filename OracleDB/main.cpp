@@ -34,6 +34,10 @@ wstring GetPW()
             break;
         }
     }
+    int i = 0;
+    while (chpw[i] != '\0') {
+        PW += (wchar_t)chpw[i++];
+    }
     return PW;
 }
 
@@ -43,11 +47,13 @@ int main()
 
     CODBC DB;
     DB.AllocateHandles();
+    // DB 연결 안되면 프로그램 종료
     if (DB.ConnectDataSource((SQLWCHAR*)DNS_name, (SQLWCHAR*)User_name, (SQLWCHAR*)Password) != SQL_SUCCESS) {
         return 1;
     }
 
-    wstring Stance = L"Init";
+    DB_Table tableData;
+    wstring Stance = L"Init", ID_Input, PW_Input, sql;
     while (true) {
         system("cls");
         if (Stance == L"Init") {
@@ -78,14 +84,30 @@ int main()
 
         // 로그인 상태
         else if (Stance == L"Login") {
-            wstring ID_Input, PW_Input;
             wcout << L"ID: ";
             wcin >> ID_Input;
             wcout << L"PW: ";
             PW_Input = GetPW();
 
-            // 신원 정보
-            wstring Authority;
+            sql = L"select acc_pw from accout where acc_id = '" + ID_Input + L"';";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(tableData);
+
+            if (tableData.Tuples.empty() || tableData.Tuples[0][0] != PW_Input) {
+                wcout << L"\n알 수 없는 ID 또는 비밀번호입니다.\n다시 입력해 주세요.";
+                Sleep(1500);
+                continue;
+            }
+
+            if (ID_Input[0] == L'P') {
+                Stance = L"Producer_Init";
+            }
+            else if (ID_Input[0] == L'W') {
+                Stance = L"Wholesaler_Init";
+            }
+            else if (ID_Input[0] == L'R') {
+                Stance = L"Seller_Init";
+            }
         }
 
         // 고객 메뉴
@@ -171,6 +193,13 @@ int main()
         // 판매자 메뉴
         else if (Stance == L"Seller_Init") {
             // 자신의 정보 출력
+            sql = L"select * from retailer where ret_id = '" + ID_Input + L"';";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(tableData);
+
+            vector<wstring> title = { L"아이디", L"업체 이름", L"주소", L"전화번호" };
+            tableData.PrintRecord(title, 0);
+
             wcout << L"이용하실 기능을 선택해주세요.\n1. 정보 수정\n2. 거래 내역 확인\n3. 유통업자와 거래\n입력: ";
             wstring Input;
             wcin >> Input;
@@ -226,7 +255,7 @@ int main()
             wcout << L"거래 할 유통업자 ID를 입력해주세요.\n입력: ";
             wstring Input;
             wcin >> Input;
-            
+
             wcout << L"거래할 작물 ID를 입력해주세요.\n입력: ";
             wcin >> Input;
 
@@ -252,7 +281,7 @@ int main()
         // 유통자 메뉴
         else if (Stance == L"Wholesaler_Init") {
             // 자신의 정보 출력
-            wcout << L"이용하실 기능을 선택해주세요.\n1. 정보 수정\n2. 거래 내역 확인\n3. 생산자와 거래\n4. 농축수산물 조회\n입력: ";
+            wcout << L"이용하실 기능을 선택해주세요.\n1. 정보 수정\n2. 거래 내역 확인\n3. 생산자와 거래\n입력: ";
             wstring Input;
             wcin >> Input;
             if (stoi(Input) == 1) {
@@ -264,11 +293,9 @@ int main()
             else if (stoi(Input) == 3) {
                 Stance = L"Wholesaler_Trade";
             }
-            else if (stoi(Input) == 4) {
-                Stance = L"Wholesaler_Trace";
-            }
         }
 
+        // 유통자 수정
         else if (Stance == L"Wholesaler_Modify") {
             wcout << L"수정하실 내용이 무엇인가요?\n1. 전화번호\n2. 주소\n3. 이름\n4. 관리시설 주소\n입력: ";
             wstring Input;
@@ -301,11 +328,164 @@ int main()
         else if (Stance == L"Wholesaler_Receipt") {
             wcout << L"어떤 거래 내역을 조회하실건가요?\n";
             wcout << L"1. 생산자와의 거래 내역\n2. 판매자와의 거래 내역\n입력: ";
+            wstring Input;
+            wcin >> Input;
+            if (stoi(Input) == 1) {
+                Stance = L"Wholesaler_Receipt_Producer";
+            }
+            else if (stoi(Input) == 2) {
+                Stance = L"Wholesaler_Receipt_Seller";
+            }
+        }
 
+        // 생산자와의 거래 내역
+        else if (Stance == L"Wholesaler_Receipt_Producer") {
+            // 거래 내역 테이블 조회 sql
+            wcout << L"아무 키를 눌러 뒤로가기";
+            wstring Input;
+            wcin >> Input;
+            Stance = L"Wholesaler_Init";
+        }
+
+        // 판매자와의 거래 내역
+        else if (Stance == L"Wholesaler_Receipt_Producer") {
+            // 거래 내역 테이블 조회 sql
+            wcout << L"아무 키를 눌러 뒤로가기";
+            wstring Input;
+            wcin >> Input;
+            Stance = L"Wholesaler_Init";
+        }
+
+        else if (Stance == L"Wholesaler_Trade") {
+            // 생산자 목록 보여줌
+            wcout << L"거래할 생산자의 ID를 적어주세요\n입력: ";
+            wstring Input;
+            wcin >> Input;
+
+            // 해당 생산자가 파는 작물 보여줌
+            wcout << L"거래할 농축수산물의 ID를 적어주세요.\n입력: ";
+            wcin >> Input;
+
+            wcout << L"단위당 금액을 입력해주세요.\n입력: ";
+            wcin >> Input;
+
+            wcout << L"수량을 입력해주세요.\n입력: ";
+            wcin >> Input;
+
+            wcout << L"특이사항을 입력해주세요.\n입력: ";
+            wcin >> Input;
         }
 
         // 생산자 메뉴
         else if (Stance == L"Producer_Init") {
+            // 자신의 정보 출력
+            wcout << L"이용하실 기능을 선택해주세요.\n1. 정보 수정\n2. 거래 내역 확인\n3. 농축수산물 등록\n4. 농축수산물 수정\n입력: ";
+            wstring Input;
+            wcin >> Input;
+            if (stoi(Input) == 1) {
+                Stance = L"Producer_Modify";
+            }
+            else if (stoi(Input) == 2) {
+                Stance = L"Producer_Receipt";
+            }
+            else if (stoi(Input) == 3) {
+                Stance = L"Producer_Prod_Register";
+            }
+            else if (stoi(Input) == 4) {
+                Stance = L"Producer_Prod_Modify";
+            }
+        }
+
+        else if (Stance == L"Producer_Modify") {
+            wcout << L"수정하실 내용이 무엇인가요?\n1. 전화번호\n2. 주소\n3. 이름\n입력: ";
+            wstring Input;
+            wcin >> Input;
+            if (stoi(Input) == 1) {
+                wcout << L"수정하실 전화번호를 적어주세요\n입력: ";
+                wcin >> Input;
+                // update sql 실행
+            }
+            else if (stoi(Input) == 2) {
+                wcout << L"수정하실 주소를 적어주세요\n입력: ";
+                wcin >> Input;
+                // update sql 실행
+            }
+            else if (stoi(Input) == 3) {
+                wcout << L"수정하실 이름을 적어주세요\n입력: ";
+                wcin >> Input;
+                // update sql 실행
+            }
+            wcout << L"정상적으로 수정되었습니다!";
+            Sleep(2000);
+            Stance = L"Producer_Init";
+        }
+
+        else if (Stance == L"Producer_Receipt") {
+            // 거래 내역 테이블 조회 sql
+            wcout << L"아무 키를 눌러 뒤로가기";
+            wstring Input;
+            wcin >> Input;
+            Stance = L"Producer_Init";
+        }
+
+        // 농축수산물 등록
+        else if (Stance == L"Producer_Prod_Register") {
+            // 농축수산물 테이블 보여줌
+            wcout << L"등록할 농축수산물 ID를 적어주세요.\n입력: ";
+            wstring Input;
+            wcin >> Input;
+
+            if (1) // 아이디 맨 앞에 따라 다르게
+            {
+
+            }
+        }
+
+        // 농축수산물 수정
+        else if (Stance == L"Producer_Prod_Modify") {
+            // 생산자가 출품한 농산물, 수산물, 축산물 테이블 보여줌
+            wcout << L"수정할 농축수산물 ID를 적어주세요.\n입력: ";
+            wstring Input;
+            wcin >> Input;
+
+            // 수정할 내용 쭉 쓰기
+        }
+
+        else if (Stance == L"Admin_Init") {
+            wcout << L"이용하실 기능을 선택해주세요.\n1. 민원 조회\n2. 거래 조회\n3. 농축수산물 조회\n4. 이용자 조회\n입력: ";
+            wstring Input;
+            wcin >> Input;
+            if (stoi(Input) == 1) {
+                Stance = L"Admin_Report";
+            }
+            else if (stoi(Input) == 2) {
+                Stance = L"Admin_Recipt";
+            }
+            else if (stoi(Input) == 3) {
+                Stance = L"Admin_Product";
+            }
+            else if (stoi(Input) == 4) {
+                Stance = L"Admin_User";
+            }
+        }
+
+        // 민원 조회
+        else if (Stance == L"Admin_Report") {
+            // 신고 테이블 조회
+        }
+
+        // 거래 조회
+        else if (Stance == L"Admin_Recipt") {
+            // 신고 테이블 조회
+        }
+
+        // 농축수산물 조회
+        else if (Stance == L"Admin_Product") {
+
+        }
+
+        // 이용자 조회
+        else if (Stance == L"Admin_User") {
 
         }
 
@@ -326,16 +506,13 @@ int main()
     setlocale(LC_ALL, "");
     
     CODBC DB;
+    DB_Table TestTable;
     DB.AllocateHandles();
     DB.ConnectDataSource((SQLWCHAR*)DNS_name, (SQLWCHAR*)User_name, (SQLWCHAR*)Password);
-    DB.ExecuteStatementDirect((SQLWCHAR*)L"SELECT * FROM plan_table;");
-    DB.PrintTable(29);
-    DB.ExecuteStatementDirect((SQLWCHAR*)L"SELECT * FROM classes;");
-    DB.PrintTable(3);
-    DB.ExecuteStatementDirect((SQLWCHAR*)L"SELECT * FROM emps;");
-    DB.PrintTable(2);
-    DB.ExecuteStatementDirect((SQLWCHAR*)L"SELECT * FROM mydept;");
-    DB.PrintTable(3);
+    DB.ExecuteStatementDirect((SQLWCHAR*)L"SELECT * FROM accout;");
+    DB.GetTableData(TestTable);
+    DB.ExecuteStatementDirect((SQLWCHAR*)L"SELECT * FROM producer;");
+    DB.GetTableData(TestTable);
 
     DB.DisconnectDataSource();
     return 0;
