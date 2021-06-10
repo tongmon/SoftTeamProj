@@ -86,13 +86,16 @@ int main()
     while (true) {
         system("cls");
         if (Stance == L"Init") {
-            wcout << L"1. 로그인\n2. 제작자\n3. 종료\n입력: ";
+            wcout << L"1. 소비자 민원\n2. 로그인\n3. 제작자\n4. 종료\n입력: ";
             wstring Input;
             wcin >> Input;
             if (stoi(Input) == 1) {
-                Stance = L"Login";
+                Stance = L"Customer_Init";
             }
             else if (stoi(Input) == 2) {
+                Stance = L"Login";
+            }
+            else if (stoi(Input) == 3) {
                 Stance = L"Dev_Show";
             }
             else {
@@ -137,6 +140,9 @@ int main()
             else if (ID_Input[0] == L'R') {
                 Stance = L"Seller_Init";
             }
+            else if (ID_Input[0] == L'A') {
+                Stance = L"Admin_Init";
+            }
         }
 
         // 고객 메뉴
@@ -161,39 +167,108 @@ int main()
         else if (Stance == L"Customer_Trace") {
             wcout << L"확인하려는 제품이 어디에 속하나요?\n";
             wcout << L"1. 농산물\n2. 축산물\n3. 수산물\n입력: ";
-            wstring Input;
+            wstring Input, seller_ph;
             wcin >> Input;
             int classify = stoi(Input);
             wcout << L"조회하려는 제품의 ID를 입력해주세요.\n입력: ";
             wcin >> Input;
+            wcout << L"판매자 전화번호를 입력해주세요.\n입력: ";
+            wcin >> seller_ph;
 
-            bool Exist = false;
+            DB_Table prodInfo;
             if (classify == 1) {
-                // sql문 실행
+                sql = L"select * from agriculture where ag_id = ';" + Input + L"';";
+                DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                DB.GetTableData(prodInfo);
             }
             else if (classify == 2) {
-                // sql문 실행
+                sql = L"select * from livestock where live_id = ';" + Input + L"';";
+                DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                DB.GetTableData(prodInfo);
             }
             else if (classify == 3) {
-                // sql문 실행
+                sql = L"select * from seafood where sea_id = ';" + Input + L"';";
+                DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                DB.GetTableData(prodInfo);
             }
 
-            if (Exist) {
-                Stance = L"Customer_Result";
-            }
-            else {
-                wcout << L"조회하려는 제품이 없습니다.\n";
+            if (prodInfo.Tuples.empty()) {
+                wcout << L"찾으시는 농축수산물이 존재하지 않습니다.\n";
                 Sleep(2000);
                 Stance = L"Customer_Init";
+                continue;
             }
-        }
 
-        // 고객 제품 이력조회 결과
-        else if (Stance == L"Customer_Result") {
-            // 제품 정보 주르륵 출력
+            wstring seller_ID, seller_loc, w_ID, w_loc, p_ID, p_loc;
+            sql = L"select ret_id, ret_address from retailer where ret_phone = '" + seller_ph + L"';";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(tableData);
+            seller_ID = tableData.Tuples[0][0];
+            seller_loc = tableData.Tuples[0][1];
+
+            sql = L"select wr_wid from wr_recipt where wr_rid = '" + seller_ID + L"' and wr_prodid = '" + Input + L"';";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(tableData);
+            w_ID = tableData.Tuples[0][0];
+
+            sql = L"select whole_facility from wholesaler where whole_id = '" + w_ID + L"';";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(tableData);
+            w_loc = tableData.Tuples[0][0];
+
+            wcout << L"생산품의 이동경로\n";
+            wcout << L"생산지: " << prodInfo.Tuples[0][3] << L"|\n|\n|\nV\n"
+                << L"유통지: " << w_loc << L"|\n|\n|\nV\n"
+                << L"판매지: " << seller_loc << L"\n";
+
+            DB_Table allprodInfo;
+            sql = L"select * from product where prod_id = '" + prodInfo.Tuples[0][2] + L"';";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(allprodInfo);
+
+            if (classify == 1) {
+                wcout << "농산품 정보\n";
+                wcout << L"농산물 ID: " << prodInfo.Tuples[0][0] << "\n";
+                wcout << L"품목: " << allprodInfo.Tuples[0][1] << "\n";
+                wcout << L"품목 그룹: " << allprodInfo.Tuples[0][2] << "\n";
+                wcout << L"품종: " << allprodInfo.Tuples[0][3] << "\n";
+                wcout << L"원산지: " << prodInfo.Tuples[0][3] << "\n";
+                wcout << L"생산일: " << prodInfo.Tuples[0][4] << "\n";
+                wcout << L"등급: " << prodInfo.Tuples[0][5] << "\n";
+                wcout << L"무게: " << prodInfo.Tuples[0][6] << "\n";
+                wcout << L"방사능 수치: " << prodInfo.Tuples[0][7] << "\n";
+                wcout << L"GAP 인증 유무: " << prodInfo.Tuples[0][8] << "\n";
+                wcout << L"GMO 인증 유무: " << prodInfo.Tuples[0][9] << "\n";
+            }
+            else if (classify == 2) {
+                wcout << "축산품 정보\n";
+                wcout << L"축산물 ID: " << prodInfo.Tuples[0][0] << "\n";
+                wcout << L"품목: " << allprodInfo.Tuples[0][1] << "\n";
+                wcout << L"품목 그룹: " << allprodInfo.Tuples[0][2] << "\n";
+                wcout << L"품종: " << allprodInfo.Tuples[0][3] << "\n";
+                wcout << L"원산지: " << prodInfo.Tuples[0][3] << "\n";
+                wcout << L"구분: " << prodInfo.Tuples[0][4] << "\n";
+                wcout << L"등급: " << prodInfo.Tuples[0][5] << "\n";
+                wcout << L"무게: " << prodInfo.Tuples[0][6] << "\n";
+                wcout << L"방사능 수치: " << prodInfo.Tuples[0][7] << "\n";
+                wcout << L"HACCP 인증 유무: " << prodInfo.Tuples[0][8] << "\n";
+            }
+            else if (classify == 3) {
+                wcout << "수산품 정보\n";
+                wcout << L"수산물 ID: " << prodInfo.Tuples[0][0] << "\n";
+                wcout << L"품목: " << allprodInfo.Tuples[0][1] << "\n";
+                wcout << L"품목 그룹: " << allprodInfo.Tuples[0][2] << "\n";
+                wcout << L"품종: " << allprodInfo.Tuples[0][3] << "\n";
+                wcout << L"원산지: " << prodInfo.Tuples[0][3] << "\n";
+                wcout << L"등급: " << prodInfo.Tuples[0][4] << "\n";
+                wcout << L"무게: " << prodInfo.Tuples[0][5] << "\n";
+                wcout << L"방사능 수치: " << prodInfo.Tuples[0][6] << "\n";
+                wcout << L"HACCP 인증 유무: " << prodInfo.Tuples[0][7] << "\n";
+                wcout << L"GMO 인증 유무: " << prodInfo.Tuples[0][8] << "\n";
+            }
             wcout << L"아무 키를 눌러 뒤로가기";
-            wstring Input;
             wcin >> Input;
+            Sleep(2000);
             Stance = L"Customer_Init";
         }
 
@@ -202,19 +277,32 @@ int main()
             wstring Input, P_ID;
             wcout << L"제품의 ID를 입력해주세요.\n입력: ";
             wcin >> P_ID;
-            wcout << L"제품의 어떤 점이 문제인가요? 설명을 작성해주세요.\n입력: ";
+
+            if (P_ID[0] == L'A') {
+                sql = L"select * from agriculture where ag_id ='" + P_ID + L"';";
+            }
+            else if (P_ID[0] == L'S') {
+                sql = L"select * from seafood where sea_id ='" + P_ID + L"';";
+            }
+            else if (P_ID[0] == L'L') {
+                sql = L"select * from livestock where live_id ='" + P_ID + L"';";
+            }
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(tableData);
+
+            if (tableData.Tuples.empty()) {
+                wcout << L"신고하려는 제품이 없습니다.\n";
+                Stance = L"Customer_Init";
+                continue;
+            }
+
+            wcout << L"제품의 어떤 점이 문제인가요? 판매자에 대한 정보도 되도록 설명해주세요.\n입력: ";
             wcin >> Input;
 
-            bool Exist = false;
-            // 존재 여부 sql 문
+            sql = L"insert into complain values ('" + P_ID + L"','" + Input + L"')";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
 
-            if (!Exist) {
-                wcout << L"조회하려는 제품이 없습니다.\n";
-            }
-            else {
-                // 제품 문제 Insert sql문
-                wcout << L"제품의 문제가 정상적으로 접수되었습니다!\n";
-            }
+            wcout << L"제품의 문제가 정상적으로 접수되었습니다!\n";
             Sleep(2000);
             Stance = L"Customer_Init";
         }
@@ -1318,19 +1406,16 @@ int main()
         }
 
         else if (Stance == L"Admin_Init") {
-            wcout << L"이용하실 기능을 선택해주세요.\n1. 민원 조회\n2. 거래 조회\n3. 농축수산물 조회\n4. 이용자 조회\n입력: ";
+            wcout << L"이용하실 기능을 선택해주세요.\n1. 민원 조회\n2. 농축수산물 추가\n3. 이용자 조회\n입력: ";
             wstring Input;
             wcin >> Input;
             if (stoi(Input) == 1) {
                 Stance = L"Admin_Report";
             }
             else if (stoi(Input) == 2) {
-                Stance = L"Admin_Recipt";
-            }
-            else if (stoi(Input) == 3) {
                 Stance = L"Admin_Product";
             }
-            else if (stoi(Input) == 4) {
+            else if (stoi(Input) == 3) {
                 Stance = L"Admin_User";
             }
         }
@@ -1338,21 +1423,173 @@ int main()
         // 민원 조회
         else if (Stance == L"Admin_Report") {
             // 신고 테이블 조회
+            sql = L"select * from complain;";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(tableData);
+            DB_Table tableBuffer;
+            wcout << L"----------------------------------\n";
+            for (int i = 0; i < tableData.Tuples.size(); i++) {
+                if (tableData.Tuples[i][0][0] == L'A') {
+                    sql = L"select * from agriculture where ag_id = '" + tableData.Tuples[i][0] + L"';";
+                    DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                    DB.GetTableData(tableBuffer);
+                    wcout << L"농산물 ID: " << tableBuffer.Tuples[i][0] << "\n";
+                    wcout << L"생산품 ID: " << tableBuffer.Tuples[i][2] << "\n";
+                    wcout << L"원산지: " << tableBuffer.Tuples[i][3] << "\n";
+                    wcout << L"생산일: " << tableBuffer.Tuples[i][4] << "\n";
+                    wcout << L"등급: " << tableBuffer.Tuples[i][5] << "\n";
+                    wcout << L"무게: " << tableBuffer.Tuples[i][6] << "\n";
+                    wcout << L"방사능 수치: " << tableBuffer.Tuples[i][7] << "\n";
+                    wcout << L"GAP 인증 유무: " << tableBuffer.Tuples[i][8] << "\n";
+                    wcout << L"GMO 인증 유무: " << tableBuffer.Tuples[i][9] << "\n";
+                }
+                else if (tableData.Tuples[i][0][0] == L'S') {
+                    sql = L"select * from agriculture where ag_id = '" + tableData.Tuples[i][0] + L"';";
+                    DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                    DB.GetTableData(tableBuffer);
+                    wcout << L"수산물 ID: " << tableData.Tuples[i][0] << "\n";
+                    wcout << L"생산품 ID: " << tableData.Tuples[i][2] << "\n";
+                    wcout << L"원산지: " << tableData.Tuples[i][3] << "\n";
+                    wcout << L"등급: " << tableData.Tuples[i][4] << "\n";
+                    wcout << L"무게: " << tableData.Tuples[i][5] << "\n";
+                    wcout << L"방사능 수치: " << tableData.Tuples[i][6] << "\n";
+                    wcout << L"HACCP 인증 유무: " << tableData.Tuples[i][7] << "\n";
+                    wcout << L"GMO 인증 유무: " << tableData.Tuples[i][8] << "\n";
+                }
+                else if (tableData.Tuples[i][0][0] == L'L') {
+                    sql = L"select * from agriculture where ag_id = '" + tableData.Tuples[i][0] + L"';";
+                    DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                    DB.GetTableData(tableBuffer);
+                    wcout << L"축산물 ID: " << tableData.Tuples[i][0] << "\n";
+                    wcout << L"생산품 ID: " << tableData.Tuples[i][2] << "\n";
+                    wcout << L"원산지: " << tableData.Tuples[i][3] << "\n";
+                    wcout << L"구분: " << tableData.Tuples[i][4] << "\n";
+                    wcout << L"등급: " << tableData.Tuples[i][5] << "\n";
+                    wcout << L"무게: " << tableData.Tuples[i][6] << "\n";
+                    wcout << L"방사능 수치: " << tableData.Tuples[i][7] << "\n";
+                    wcout << L"HACCP 인증 유무: " << tableData.Tuples[i][8] << "\n";
+                }
+                wcout << L"특이사항: " << tableData.Tuples[i][1] << "\n";
+                wcout << L"----------------------------------\n";
+            }
+            wcout << L"아무 키를 눌러 뒤로가기";
+            wstring Input;
+            wcin >> Input;
+            Sleep(2000);
+            Stance = L"Admin_Init";
         }
 
-        // 거래 조회
-        else if (Stance == L"Admin_Recipt") {
-            // 신고 테이블 조회
-        }
-
-        // 농축수산물 조회
+        // 농축수산물 추가
         else if (Stance == L"Admin_Product") {
-
+            wstring Input;
+            vector<wstring> In_data;
+            wcout << L"추가할 것이 무엇인지 선택해주세요\n1. 농산물\n2. 수산물\n3. 축산물\n입력: ";
+            wcin >> Input;
+            if (stoi(Input) == 1) {
+                sql = L"select product_id from product where product_id like 'A%' order by product_id desc;";
+                In_data.push_back(L"A");
+            }
+            else if (stoi(Input) == 2) {
+                sql = L"select product_id from product where product_id like 'S%' order by product_id desc;";
+                In_data.push_back(L"S");
+            }
+            else if (stoi(Input) == 3) {
+                sql = L"select product_id from product where product_id like 'L%' order by product_id desc;";
+                In_data.push_back(L"L");
+            }
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            DB.GetTableData(tableData);
+            int num = stoi(tableData.Tuples[0][0].substr(1));
+            In_data[0] += to_wstring(num + 1);
+            wcout << L"생산품 이름을 입력해주세요\n입력: ";
+            wcin >> Input;
+            In_data.push_back(Input);
+            wcout << L"생산품 그룹을 입력해주세요\n입력: ";
+            wcin >> Input;
+            In_data.push_back(Input);
+            wcout << L"생산품 품종을 입력해주세요\n입력: ";
+            wcin >> Input;
+            In_data.push_back(Input);
+            wcout << L"도매 거래 단위를 입력해주세요\n입력: ";
+            wcin >> Input;
+            In_data.push_back(Input);
+            wcout << L"소매 거래 단위를 입력해주세요\n입력: ";
+            wcin >> Input;
+            In_data.push_back(Input);
+            sql = L"insert into product values('" + In_data[0] + L"','" + In_data[1] + L"','" + In_data[2] + L"','"
+                + In_data[3] + L"','" + In_data[4] + L"','" + In_data[5] + L"');";
+            DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+            wcout << L"정상적으로 추가되었습니다!";
+            Sleep(2000);
+            Stance = L"Admin_Init";
         }
 
         // 이용자 조회
         else if (Stance == L"Admin_User") {
-
+            wstring Input;
+            int printID = 1;
+            wcout << L"찾으실 사용자의 전화번호나 키를 입력해주세요\n입력: ";
+            wcin >> Input;
+            if (Input[0] == L'P' || Input[0] == L'p') {
+                sql = L"select * from producer where prod_id = '" + Input + L"';";
+                DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                DB.GetTableData(tableData); 
+                printID = 1;
+            }
+            else if (Input[0] == L'R' || Input[0] == L'R') {
+                sql = L"select * from retailer where ret_id = '" + Input + L"';";
+                DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                DB.GetTableData(tableData);
+                printID = 2;
+            }
+            else if (Input[0] == L'W' || Input[0] == L'W') {
+                sql = L"select * from wholesaler where whole_id = '" + Input + L"';";
+                DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                DB.GetTableData(tableData);
+                printID = 3;
+            }
+            else {
+                sql = L"select * from producer where prod_phone = '" + Input + L"';";
+                DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                DB.GetTableData(tableData);
+                if (tableData.Tuples.empty()) {
+                    sql = L"select * from retailer where ret_phone = '" + Input + L"';";
+                    DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                    DB.GetTableData(tableData);
+                }
+                else
+                    printID = 2;
+                if (tableData.Tuples.empty()) {
+                    sql = L"select * from wholesaler where whole_phone = '" + Input + L"';";
+                    DB.ExecuteStatementDirect((SQLWCHAR*)sql.c_str());
+                    DB.GetTableData(tableData);
+                }
+                else
+                    printID = 3;
+            }
+            if (printID == 1) {
+                wcout << L"생산자 ID: " << tableData.Tuples[0][0] << L"\n";
+                wcout << L"생산자 이름: " << tableData.Tuples[0][1] << L"\n";
+                wcout << L"생산자 주소: " << tableData.Tuples[0][2] << L"\n";
+                wcout << L"생산자 전화번호: " << tableData.Tuples[0][3] << L"\n";
+            }
+            else if (printID == 2) {
+                wcout << L"판매자 ID: " << tableData.Tuples[0][0] << L"\n";
+                wcout << L"판매업체: " << tableData.Tuples[0][1] << L"\n";
+                wcout << L"판매자 주소: " << tableData.Tuples[0][2] << L"\n";
+                wcout << L"판매자 전화번호: " << tableData.Tuples[0][3] << L"\n";
+            }
+            else {
+                wcout << L"유통업자 ID: " << tableData.Tuples[0][0] << L"\n";
+                wcout << L"유통업체: " << tableData.Tuples[0][1] << L"\n";
+                wcout << L"유통업체 주소: " << tableData.Tuples[0][2] << L"\n";
+                wcout << L"유통업체 전화번호: " << tableData.Tuples[0][3] << L"\n";
+                wcout << L"관리 시설 주소: " << tableData.Tuples[0][4] << L"\n";
+            }
+            wcout << L"아무 키를 눌러 뒤로가기";
+            wcin >> Input;
+            Sleep(2000);
+            Stance = L"Admin_Init";
         }
 
         // 종료 상태
