@@ -10,7 +10,8 @@ CODBC::~CODBC()
 
 }
 
-void CODBC::AllocateHandles() {
+void CODBC::AllocateHandles() 
+{
     wostringstream outs;
     outs.precision(6);
 
@@ -45,9 +46,8 @@ void CODBC::AllocateHandles() {
     wcout << outs.str();
 }
 
-int CODBC::ConnectDataSource(SQLWCHAR* DSN_name, SQLWCHAR* User_name, SQLWCHAR* Passwd) {
-
-    // 32-bit, 64-bit 주의
+int CODBC::ConnectDataSource(SQLWCHAR* DSN_name, SQLWCHAR* User_name, SQLWCHAR* Passwd) 
+{
     retcode = SQLConnect(hdbc, DSN_name, SQL_NTS, User_name, SQL_NTS, Passwd, SQL_NTS);
     if (retcode != SQL_SUCCESS && retcode != SQL_SUCCESS_WITH_INFO) // 연결 실패시
     {
@@ -58,13 +58,13 @@ int CODBC::ConnectDataSource(SQLWCHAR* DSN_name, SQLWCHAR* User_name, SQLWCHAR* 
     return SQL_SUCCESS;
 }
 
-int CODBC::ExecuteStatementDirect(SQLWCHAR* sql) {
+int CODBC::ExecuteStatementDirect(SQLWCHAR* sql) 
+{
     wostringstream outs;
     outs.precision(6);
 
     if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO) {
         retcode = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
-        // outs << L"연결 성공...\n";
     }
     else {
         SQLGetDiagRec(SQL_HANDLE_DBC, hdbc, ++rec, state, &native, message, sizeof(message), &length);
@@ -72,8 +72,6 @@ int CODBC::ExecuteStatementDirect(SQLWCHAR* sql) {
     }
     retcode = SQLExecDirect(hstmt, sql, SQL_NTS);
     if (retcode == SQL_SUCCESS) {
-        // outs << L"쿼리 성공...\n";
-        // wcout << outs.str();
         return retcode;
     }
     SQLGetDiagRec(SQL_HANDLE_STMT, hstmt, ++rec, state, &native, message, sizeof(message), &length);
@@ -82,43 +80,35 @@ int CODBC::ExecuteStatementDirect(SQLWCHAR* sql) {
     return retcode;
 }
 
-int CODBC::PrepareStatement(SQLWCHAR* sql) {
+int CODBC::PrepareStatement(SQLWCHAR* sql) 
+{
     wostringstream outs;
     outs.precision(6);
 
     if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO) {
         retcode = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
-        // outs << L"연결 성공...\n";
     }
     else {
         SQLGetDiagRec(SQL_HANDLE_DBC, hdbc, ++rec, state, &native, message, sizeof(message), &length);
-        // outs << state << " : " << rec << " : " << native << " : " << message << "\n";
     }
     retcode = SQLPrepare(hstmt, sql, SQL_NTS);
     if (retcode == SQL_SUCCESS) {
-        // outs << L"쿼리 준비 성공...\n";
-        // wcout << outs.str();
         return retcode;
     }
     SQLGetDiagRec(SQL_HANDLE_STMT, hstmt, ++rec, state, &native, message, sizeof(message), &length);
-    // outs << state << " : " << rec << " : " << native << " : " << message << "\n";
-    // wcout << outs.str();
     return retcode;
 }
 
-int CODBC::ExecuteStatement() {
+int CODBC::ExecuteStatement() 
+{
     wostringstream outs;
     outs.precision(6);
 
     retcode = SQLExecute(hstmt);
     if (retcode == SQL_SUCCESS) {
-        // outs << L"쿼리 실행 성공...\n";
-        // wcout << outs.str();
         return retcode;
     }
     SQLGetDiagRec(SQL_HANDLE_STMT, hstmt, ++rec, state, &native, message, sizeof(message), &length);
-    // outs << state << " : " << rec << " : " << native << " : " << message << "\n";
-    // wcout << outs.str();
     return retcode;
 }
 
@@ -159,38 +149,6 @@ int CODBC::PrintTable(int Degree, wstring title)
     return 1;
 }
 
-/*
-int CODBC::GetTableData(int Degree, vector<vector<wstring>>& tableData)
-{
-    tableData.clear();
-    vector<wstring> Zero;
-    vector<string> Attribute(Degree);
-    SQLLEN Len = 0;
-
-    for (int i = 0; i < Degree; i++) {
-        SQLBindCol(hstmt, i + 1, SQL_C_CHAR, &Attribute[i][0], mMaxBufferSize, &Len);
-    }
-
-    while (true) {
-        retcode = SQLFetch(hstmt);
-        if (retcode == SQL_NO_DATA)
-            break;
-        tableData.push_back(Zero);
-        for (int i = 0; i < Degree; i++) {
-            string buf = Attribute[i].c_str();
-            wstring wbuf(buf.begin(), buf.end());
-            tableData.back().push_back(wbuf);
-        }
-    }
-    if (tableData.empty()) {
-        SQLFreeStmt(hstmt, SQL_UNBIND);
-        return -1;
-    }
-    SQLFreeStmt(hstmt, SQL_UNBIND);
-    return 1;
-}
-*/
-
 int CODBC::GetTableData(DB_Table& tableData)
 {
     vector<wstring> Zero;
@@ -223,7 +181,7 @@ int CODBC::GetTableData(DB_Table& tableData)
         retcode = SQLFetch(hstmt);
         if (retcode == SQL_NO_DATA)
             break;
-        tableData.Tuples.push_back(Zero);
+        tableData.Tuples.push_back(Zero); // 튜플 초기화
         for (int i = 0; i < Degree; i++) {
             string buf;
             int k = 0;
@@ -231,7 +189,7 @@ int CODBC::GetTableData(DB_Table& tableData)
                 buf += Data[i][k];
                 k++;
             }
-            tableData.Tuples.back().push_back(wstrconv(buf));
+            tableData.Tuples.back().push_back(wstrconv(buf)); // 튜플에 데이터 추가
         }
     }
     if (tableData.Tuples.empty()) {
@@ -242,7 +200,8 @@ int CODBC::GetTableData(DB_Table& tableData)
     return 1;
 }
 
-void CODBC::DisconnectDataSource() {
+void CODBC::DisconnectDataSource() 
+{
     if (hstmt) {
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
         hstmt = NULL;

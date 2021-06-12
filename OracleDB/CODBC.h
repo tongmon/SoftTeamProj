@@ -11,29 +11,36 @@
 
 using namespace std;
 
-struct DB_Table {
+// 201663021 이경준 
+
+struct DB_Table // 데이터베이스 결과는 테이블이기에 테이블 자료형을 따로 선언
+{
     int index = 0;
     vector<wstring> Attribute; // 속성
     vector<vector<wstring>> Tuples; // 레코드
 
-    void PrintTable(vector<wstring> &ptitle) {
+    void PrintTable(vector<wstring> &ptitle) // 테이블 출력
+    {
         for (int i = 0; i < 5 && index + i < Tuples.size(); i++) {
             PrintRecord(ptitle, index + i);
             wcout << L"\n";
         }
     }
 
-    void NextPage() {
+    void NextPage() // 레코드 5개 앞으로
+    {
         if (Tuples.size() <= 5)
             return;
         index = min(index + 5, Tuples.size() - 5);
     }
 
-    void PrevPage() {
+    void PrevPage() // 레코드 5개 뒤로
+    {
         index = max(0, index - 5);
     }
 
-    void PrintRecord(vector<wstring>& ptitle, int n) {
+    void PrintRecord(vector<wstring>& ptitle, int n) // 레코드 하나 출력
+    {
         for (int i = 0; i < ptitle.size(); i++) {
             wcout << ptitle[i] << L": " << Tuples[n][i] << L"\n";
         }
@@ -46,7 +53,8 @@ static wstring wstrconv(const string& src)
     return wstring(A2W(src.c_str()));
 };
 
-class CODBC {
+class CODBC // ODBC와 C++ 연동 클래스
+{
 
     SQLHENV henv;
     SQLHDBC hdbc;
@@ -61,8 +69,6 @@ class CODBC {
     // 버퍼 크기
     SQLLEN mMaxBufferSize;
 
-    // 
-
 public:
     CODBC();
     ~CODBC();
@@ -73,6 +79,5 @@ public:
     int ExecuteStatement(); // 준비된 쿼리문 실행
     void DisconnectDataSource(); // 핸들 모두 해제
     int PrintTable(int Degree, wstring title = L"Table Data Below"); // 속성 개수 넣어주면 테이블 반환
-    // int GetTableData(int Degree, vector<vector<wstring>>& tableData);
-    int GetTableData(DB_Table& tableData);
+    int GetTableData(DB_Table& tableData); // 테이블 데이터 획득 함수
 };
